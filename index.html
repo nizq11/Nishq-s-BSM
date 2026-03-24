@@ -15,15 +15,15 @@
   .header {
     background: #020617;
     padding: 20px 40px;
-    font-size: 24px;
+    font-size: 22px;
     font-weight: bold;
     border-bottom: 1px solid #1e293b;
   }
 
   .container {
-    padding: 40px;
     max-width: 900px;
     margin: auto;
+    padding: 40px;
   }
 
   .card {
@@ -31,12 +31,11 @@
     padding: 25px;
     border-radius: 12px;
     margin-bottom: 30px;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.4);
   }
 
   h2 {
-    margin-top: 0;
     color: #38bdf8;
+    margin-top: 0;
   }
 
   input, select {
@@ -60,10 +59,6 @@
     cursor: pointer;
   }
 
-  button:hover {
-    background: #0ea5e9;
-  }
-
   .result {
     margin-top: 12px;
     font-size: 18px;
@@ -84,12 +79,14 @@
 
 <div class="container">
 
+<!-- BSM -->
 <div class="card">
 <h2>BSM Model</h2>
 
 <div class="info">
-S = Spot price | K = Strike | r = risk-free rate (%)<br>
-q = dividend / foreign rate (%) | σ = volatility (%) | T = time (years)
+S = Spot price | K = Strike<br>
+r = Risk-free rate (%) | q = Dividend/FX rate (%)<br>
+σ = Volatility (%) | T = Time (years)
 </div>
 
 <select id="type">
@@ -108,12 +105,14 @@ q = dividend / foreign rate (%) | σ = volatility (%) | T = time (years)
 <div class="result" id="bsmResult"></div>
 </div>
 
+<!-- BLACK -->
 <div class="card">
 <h2>Black Model (Futures)</h2>
 
 <div class="info">
-F = Futures price | K = Strike | r = rate (%)<br>
-σ = volatility (%) | T = time (years)
+F = Futures price | K = Strike<br>
+r = Risk-free rate (%) | σ = Volatility (%)<br>
+T = Time (years)
 </div>
 
 <select id="typeF">
@@ -134,10 +133,13 @@ F = Futures price | K = Strike | r = rate (%)<br>
 </div>
 
 <script>
+
+// Normal CDF
 function N(x) {
-  return (1 + erf(x / Math.sqrt(2))) / 2;
+  return 0.5 * (1 + erf(x / Math.sqrt(2)));
 }
 
+// Error function
 function erf(x) {
   let sign = x >= 0 ? 1 : -1;
   x = Math.abs(x);
@@ -149,47 +151,66 @@ function erf(x) {
   return sign * y;
 }
 
-// convert % → decimal safely
+// % → decimal
 function toDecimal(x) {
   return parseFloat(x) / 100;
 }
 
+// BSM
 function priceBSM() {
-  let S = parseFloat(S.value);
-  let K = parseFloat(K.value);
+  let S = parseFloat(document.getElementById("S").value);
+  let K = parseFloat(document.getElementById("K").value);
   let r = toDecimal(document.getElementById("r").value);
   let q = toDecimal(document.getElementById("q").value);
   let sigma = toDecimal(document.getElementById("sigma").value);
-  let T = parseFloat(T.value);
+  let T = parseFloat(document.getElementById("T").value);
   let type = document.getElementById("type").value;
+
+  if ([S,K,r,q,sigma,T].some(v => isNaN(v))) {
+    alert("Fill all fields correctly");
+    return;
+  }
 
   let d1 = (Math.log(S/K) + (r - q + 0.5*sigma*sigma)*T) / (sigma*Math.sqrt(T));
   let d2 = d1 - sigma*Math.sqrt(T);
 
-  let price = type === "call"
-    ? S*Math.exp(-q*T)*N(d1) - K*Math.exp(-r*T)*N(d2)
-    : K*Math.exp(-r*T)*N(-d2) - S*Math.exp(-q*T)*N(-d1);
+  let price;
+  if (type === "call") {
+    price = S*Math.exp(-q*T)*N(d1) - K*Math.exp(-r*T)*N(d2);
+  } else {
+    price = K*Math.exp(-r*T)*N(-d2) - S*Math.exp(-q*T)*N(-d1);
+  }
 
   document.getElementById("bsmResult").innerText = "Price: " + price.toFixed(4);
 }
 
+// BLACK MODEL
 function priceBlack() {
-  let F = parseFloat(F.value);
-  let K = parseFloat(Kf.value);
+  let F = parseFloat(document.getElementById("F").value);
+  let K = parseFloat(document.getElementById("Kf").value);
   let r = toDecimal(document.getElementById("rf").value);
   let sigma = toDecimal(document.getElementById("sigmaf").value);
-  let T = parseFloat(Tf.value);
+  let T = parseFloat(document.getElementById("Tf").value);
   let type = document.getElementById("typeF").value;
+
+  if ([F,K,r,sigma,T].some(v => isNaN(v))) {
+    alert("Fill all fields correctly");
+    return;
+  }
 
   let d1 = (Math.log(F/K) + 0.5*sigma*sigma*T) / (sigma*Math.sqrt(T));
   let d2 = d1 - sigma*Math.sqrt(T);
 
-  let price = type === "call"
-    ? Math.exp(-r*T)*(F*N(d1) - K*N(d2))
-    : Math.exp(-r*T)*(K*N(-d2) - F*N(-d1));
+  let price;
+  if (type === "call") {
+    price = Math.exp(-r*T)*(F*N(d1) - K*N(d2));
+  } else {
+    price = Math.exp(-r*T)*(K*N(-d2) - F*N(-d1));
+  }
 
   document.getElementById("blackResult").innerText = "Price: " + price.toFixed(4);
 }
+
 </script>
 
 </body>
