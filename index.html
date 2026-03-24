@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Option Pricing Tool</title>
+  <style>
+    body { font-family: Arial; margin: 40px; }
+    input, select { margin: 5px; padding: 6px; width: 220px; }
+    button { padding: 8px 12px; margin-top: 10px; }
+    .section { margin-bottom: 40px; }
+    .result { font-weight: bold; margin-top: 10px; }
+    .info { font-size: 13px; color: #555; margin-bottom: 10px; }
+  </style>
+</head>
+<body>
+
+<h1>Option Pricing Tool (BSM & Black Model)</h1>
+
+<!-- BSM SECTION -->
+<div class="section">
+  <h2>BSM Model (Stocks, FX, Interest Rates)</h2>
+
+  <div class="info">
+    S = Spot price of underlying<br>
+    K = Strike price<br>
+    r = Risk-free interest rate (annual, decimal)<br>
+    q = Dividend yield (stocks) / Foreign interest rate (FX)<br>
+    σ = Volatility (annual standard deviation)<br>
+    T = Time to maturity (in years)<br>
+  </div>
+
+  <label>Option Type:</label>
+  <select id="type">
+    <option value="call">Call</option>
+    <option value="put">Put</option>
+  </select><br>
+
+  <input id="S" placeholder="S (Spot Price)">
+  <input id="K" placeholder="K (Strike)">
+  <input id="r" placeholder="r (Risk-free rate)">
+  <input id="q" placeholder="q (Dividend / foreign rate)">
+  <input id="sigma" placeholder="σ (Volatility)">
+  <input id="T" placeholder="T (Time in years)"><br>
+
+  <button onclick="priceBSM()">Calculate BSM Price</button>
+  <div class="result" id="bsmResult"></div>
+</div>
+
+<!-- BLACK MODEL SECTION -->
+<div class="section">
+  <h2>Black Model (Options on Futures)</h2>
+
+  <div class="info">
+    F = Futures price of underlying<br>
+    K = Strike price<br>
+    r = Risk-free interest rate<br>
+    σ = Volatility of futures price<br>
+    T = Time to maturity (in years)<br>
+  </div>
+
+  <label>Option Type:</label>
+  <select id="typeF">
+    <option value="call">Call</option>
+    <option value="put">Put</option>
+  </select><br>
+
+  <input id="F" placeholder="F (Futures Price)">
+  <input id="Kf" placeholder="K (Strike)">
+  <input id="rf" placeholder="r (Risk-free rate)">
+  <input id="sigmaf" placeholder="σ (Volatility)">
+  <input id="Tf" placeholder="T (Time in years)"><br>
+
+  <button onclick="priceBlack()">Calculate Black Price</button>
+  <div class="result" id="blackResult"></div>
+</div>
+
+<script>
+function N(x) {
+  return (1 + erf(x / Math.sqrt(2))) / 2;
+}
+
+function erf(x) {
+  let sign = (x >= 0) ? 1 : -1;
+  x = Math.abs(x);
+
+  let a1 = 0.254829592, a2 = -0.284496736, a3 = 1.421413741,
+      a4 = -1.453152027, a5 = 1.061405429, p = 0.3275911;
+
+  let t = 1.0 / (1.0 + p * x);
+  let y = 1.0 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1)
+      * t * Math.exp(-x * x);
+
+  return sign * y;
+}
+
+// BSM
+function priceBSM() {
+  let S = parseFloat(document.getElementById("S").value);
+  let K = parseFloat(document.getElementById("K").value);
+  let r = parseFloat(document.getElementById("r").value);
+  let q = parseFloat(document.getElementById("q").value);
+  let sigma = parseFloat(document.getElementById("sigma").value);
+  let T = parseFloat(document.getElementById("T").value);
+  let type = document.getElementById("type").value;
+
+  let d1 = (Math.log(S/K) + (r - q + 0.5*sigma*sigma)*T) / (sigma*Math.sqrt(T));
+  let d2 = d1 - sigma*Math.sqrt(T);
+
+  let price;
+  if (type === "call") {
+    price = S*Math.exp(-q*T)*N(d1) - K*Math.exp(-r*T)*N(d2);
+  } else {
+    price = K*Math.exp(-r*T)*N(-d2) - S*Math.exp(-q*T)*N(-d1);
+  }
+
+  document.getElementById("bsmResult").innerText = "Price: " + price.toFixed(4);
+}
+
+// BLACK MODEL
+function priceBlack() {
+  let F = parseFloat(document.getElementById("F").value);
+  let K = parseFloat(document.getElementById("Kf").value);
+  let r = parseFloat(document.getElementById("rf").value);
+  let sigma = parseFloat(document.getElementById("sigmaf").value);
+  let T = parseFloat(document.getElementById("Tf").value);
+  let type = document.getElementById("typeF").value;
+
+  let d1 = (Math.log(F/K) + 0.5*sigma*sigma*T) / (sigma*Math.sqrt(T));
+  let d2 = d1 - sigma*Math.sqrt(T);
+
+  let price;
+  if (type === "call") {
+    price = Math.exp(-r*T)*(F*N(d1) - K*N(d2));
+  } else {
+    price = Math.exp(-r*T)*(K*N(-d2) - F*N(-d1));
+  }
+
+  document.getElementById("blackResult").innerText = "Price: " + price.toFixed(4);
+}
+</script>
+
+</body>
+</html>
